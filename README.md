@@ -1,93 +1,115 @@
-# SampleMicrosoftFoundryOpenAIProject
+# Sample Microsoft Foundry OpenAI Project
 
-## Overview
+## 1. Overview
+This repository contains a .NET console application that connects to an Azure AI Foundry endpoint and uses a deployed model to generate responses through the OpenAI .NET SDK.
 
-This repository contains a sample C# project demonstrating how to build and run an application that integrates with Microsoft Foundry and OpenAI services. It provides example code and configuration to help you get started quickly.
+The sample demonstrates how to:
+- authenticate to Azure using `DefaultAzureCredential`
+- connect to an Azure AI Foundry endpoint
+- create an `OpenAIClient` and `ResponsesClient`
+- send prompts and print model responses in a simple command-line loop
 
-## Description
+## 2. Description
+This project is a minimal sample for working with Azure AI Foundry and the OpenAI .NET SDK in a .NET application. It uses the `OpenAI` and `Azure.Identity` libraries to authenticate and interact with a Foundry-hosted model.
 
-The project is implemented in C# and targets .NET. It includes sample code showing how to call OpenAI APIs, handle authentication, and process responses. Use this repository as a reference or starting point for integrating OpenAI capabilities into your .NET applications.
+The app reads user input from the terminal, sends it to the configured model, and prints the generated response. It is intended as a starting point for developers building AI-powered .NET applications that use a Microsoft Azure AI Foundry endpoint.
 
-## Pre-requisites
+The OpenAI Responses API enables a unified pattern for sending prompts and receiving structured model responses. This sample uses the Foundry endpoint as the back-end and authenticates with Microsoft Entra ID through `DefaultAzureCredential`.
 
-- .NET SDK 6.0 or later installed (download from https://dotnet.microsoft.com/)
-- Visual Studio 2022 / Visual Studio Code or another C# IDE/text editor
-- (Optional) An OpenAI API key or Microsoft Foundry credentials if you plan to run the samples that call external services
-- Git (to clone the repository)
+The key configuration values are defined in `SampleMicrosoftFoundryOpenAIProject/Program.cs`:
+- `endpoint`: Azure AI Foundry project endpoint
+- `model`: deployed model name
+- `instructions`: system instructions for the assistant
 
-## SDKs and Libraries Used
+### SDKs Used
+This project uses the OpenAI .NET SDK (`OpenAI`) as the primary client library and `Azure.Identity` for authentication. The code uses a custom bearer token policy scoped to `https://ai.azure.com/.default` and then creates an `OpenAIClient` with the Azure AI Foundry endpoint.
 
-This project depends on the .NET SDK and one or more client libraries for interacting with OpenAI or Azure OpenAI services. Below are recommended packages and installation commands.
+This sample is not using the `Azure.AI.Projects` SDK in the project file. The actual package references in the project are:
 
-- .NET SDK: 6.0 or later (required)
+From the project file (`SampleMicrosoftFoundryOpenAIProject/SampleMicrosoftFoundryOpenAIProject.csproj`):
 
-- Azure OpenAI (official Azure SDK, use when targeting Azure OpenAI Service):
+```xml
+<ItemGroup>
+  <PackageReference Include="Azure.Identity" Version="1.21.0" />
+  <PackageReference Include="OpenAI" Version="2.14.0" />
+</ItemGroup>
+```
 
-  Installation:
+From `SampleMicrosoftFoundryOpenAIProject/Program.cs` (client construction):
 
-    dotnet add package Azure.AI.OpenAI
+```csharp
+DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
+{
+    ExcludeManagedIdentityCredential = true,
+    ExcludeWorkloadIdentityCredential = true,
+});
 
-  Usage notes:
-  - This library provides strongly-typed clients for working with Azure OpenAI endpoints and is recommended if you deploy via Azure or Microsoft Foundry.
-  - Configure endpoint and key using environment variables or appsettings.json.
+BearerTokenPolicy tokenPolicy = new(credential, "https://ai.azure.com/.default");
+OpenAIClient openAIClient = new(
+    authenticationPolicy: tokenPolicy,
+    options: new OpenAIClientOptions
+    {
+        Endpoint = new Uri(endpoint),
+    });
 
-- OpenAI (third-party / community .NET clients) — use if calling the OpenAI API directly:
+ResponsesClient responseClient = openAIClient.GetResponsesClient();
+```
 
-  - There are community-maintained SDKs (e.g., OpenAI-DotNet). If you prefer not to use a community SDK, you can call the REST API directly with HttpClient.
+The configured endpoint in the sample points to an Azure AI Foundry `services.ai.azure.com` endpoint, which confirms the Foundry integration.
 
-- Configuration & helpers (recommended):
+## 3. Pre-requisites
+Before running the project, make sure you have:
+- .NET 10 SDK installed
+- An Azure subscription
+- An Azure AI Foundry project created in Azure
+- A deployed model in your Foundry project
+- Access to the project with a valid Azure identity
 
-  - Microsoft.Extensions.Configuration
-  - Microsoft.Extensions.Configuration.UserSecrets (for local secret storage during development)
+You should also sign in to Azure before running the app, for example:
 
-  Example:
+```bash
+az login
+```
 
-    dotnet add package Microsoft.Extensions.Configuration
-    dotnet add package Microsoft.Extensions.Configuration.UserSecrets
+If you are using Visual Studio, Visual Studio Code, or another supported Azure credential source, those will also work with `DefaultAzureCredential`.
 
-Configuration tips:
-- Store API keys in environment variables or user secrets rather than hard-coding them. Example env var names used in this README: OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_KEY.
-- For Azure.AI.OpenAI, set AZURE_OPENAI_ENDPOINT to your endpoint URL and AZURE_OPENAI_KEY to the credential.
-
-## Build and Run
-
+## 4. Build and Run
 1. Clone the repository:
 
-   git clone https://github.com/atishagarwaal/SampleMicrosoftFoundryOpenAIProject.git
-   cd SampleMicrosoftFoundryOpenAIProject
+```bash
+git clone https://github.com/atishagarwaal/SampleMicrosoftFoundryOpenAIProject.git
+cd SampleMicrosoftFoundryOpenAIProject
+```
 
-2. Restore dependencies and build the project:
+2. Update the Azure AI Foundry configuration in `SampleMicrosoftFoundryOpenAIProject/Program.cs`:
+- set the correct `endpoint`
+- set the correct `model`
+- confirm the `instructions` match your scenario
 
-   dotnet restore
-   dotnet build
+3. Restore dependencies and build the project:
 
-3. Run the project:
+```bash
+dotnet restore
+dotnet build
+```
 
-   dotnet run --project <PathToProjectFile.csproj>
+4. Run the application:
 
-   Or open the solution in Visual Studio and run from the IDE.
+```bash
+dotnet run --project SampleMicrosoftFoundryOpenAIProject/SampleMicrosoftFoundryOpenAIProject.csproj
+```
 
-4. Configuration:
+5. Enter a prompt in the terminal. Type `quit` to exit the app.
 
-   - If the sample requires API keys, add them to user secrets, environment variables, or an appsettings.json as appropriate. For example, to use an environment variable:
+Example:
 
-     - Linux/macOS:
-       export OPENAI_API_KEY="your_api_key_here"
+```text
+Assistant: Enter a prompt (or type 'quit' to exit)
 
-     - Windows (PowerShell):
-       $env:OPENAI_API_KEY = "your_api_key_here"
+You: Hello!
 
-     - For Azure OpenAI (example):
-       export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-       export AZURE_OPENAI_KEY="your_key_here"
+Assistant: Hello! How can I help you today?
+```
 
-5. Troubleshooting:
-
-   - Ensure the .NET SDK version matches the target framework of the project files.
-   - Verify NuGet packages are restored successfully.
-   - Check the README or comments in sample files for any additional configuration steps or environment variables required.
-
-
----
-
-If you'd like, I can update the README to reference the exact NuGet packages and versions used by the project (I can inspect the project files to pick the correct packages), add example code snippets showing how to construct the client, or add LICENSE and CONTRIBUTING sections — tell me which details to include and I'll update the file.
+## Notes
+This sample is intentionally simple and is designed to help you understand the basic flow for integrating Azure AI Foundry with a .NET application using the OpenAI .NET SDK and Azure Identity.
